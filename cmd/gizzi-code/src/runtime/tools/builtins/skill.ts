@@ -3,12 +3,15 @@ import { pathToFileURL } from "url"
 import z from "zod/v4"
 import { Tool } from "@/runtime/tools/builtins/tool"
 import { Skill } from "@/runtime/skills/skill"
+import * as BotTurn from "@/runtime/bots/bot-turn"
 import { PermissionNext } from "@/runtime/tools/guard/permission/next"
 import { Ripgrep } from "@/shared/file/ripgrep"
 import { iife } from "@/shared/util/iife"
 
 export const SkillTool = Tool.define("skill", async (ctx) => {
-  const skills = await Skill.all()
+  // A bot turn never sees the user's personal skills (runtime/bots/bot-turn.ts).
+  const forBot = Boolean(BotTurn.get(ctx?.sessionID))
+  const skills = (await Skill.all()).filter((skill) => !forBot || BotTurn.skillVisibleToBot(skill))
 
   // Filter skills by agent permissions if agent provided
   const agent = ctx?.agent
@@ -59,10 +62,17 @@ export const SkillTool = Tool.define("skill", async (ctx) => {
     description,
     parameters,
     async execute(params: z.infer<typeof parameters>, ctx) {
-      const skill = await Skill.get(params.name)
+      const botTurn = Boolean(BotTurn.get(ctx.sessionID))
+      const found = await Skill.get(params.name)
+      const skill = found && (!botTurn || BotTurn.skillVisibleToBot(found)) ? found : undefined
 
       if (!skill) {
-        const available = await Skill.all().then((items) => items.map((item) => item.name).join(", "))
+        const available = await Skill.all().then((items) =>
+          items
+            .filter((item) => !botTurn || BotTurn.skillVisibleToBot(item))
+            .map((item) => item.name)
+            .join(", "),
+        )
         throw new Error(`Skill "${params.name}" not found. Available skills: ${available || "none"}`)
       }
 

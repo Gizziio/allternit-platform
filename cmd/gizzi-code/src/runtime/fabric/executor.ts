@@ -11,6 +11,7 @@
  * every invocation returns a structured receipt.
  */
 import path from "node:path"
+import { BotTurnInfo } from "@/runtime/bots/bot-turn"
 import { Log } from "@/shared/util/log"
 import { Session } from "@/runtime/session"
 import { SessionStatus } from "@/runtime/session/status"
@@ -254,6 +255,10 @@ const sessionMessageExecutor: CapabilityExecutor<
     if (input.metadata && typeof input.metadata === "object") {
       promptOptions.metadata = input.metadata as Record<string, unknown>
     }
+
+    // A bot's turn (runtime/bots/bot-turn.ts), same marker as /v1/session/:id/message.
+    const bot = BotTurnInfo.safeParse((input as { bot?: unknown }).bot)
+    if (bot.success) promptOptions.bot = bot.data
 
     // Effort is forwarded via metadata so the runtime can apply it to
     // reasoning-capable models and ignore it for models without reasoning.

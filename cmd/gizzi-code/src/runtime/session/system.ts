@@ -13,6 +13,7 @@ import PROMPT_TRINITY from "@/runtime/session/prompt/trinity.txt"
 import PROMPT_PLAN_MODE from "@/runtime/session/prompt/plan-mode.txt"
 import PROMPT_BUILD_MODE from "@/runtime/session/prompt/build-mode.txt"
 import PROMPT_MDX_GRAPHS from "@/runtime/session/prompt/mdx-graphs.txt"
+import PROMPT_BOT from "@/runtime/session/prompt/bot.txt"
 import type { Provider } from "@/runtime/providers/provider"
 
 export namespace SystemPrompt {
@@ -42,6 +43,19 @@ export namespace SystemPrompt {
     }
     
     return basePrompts
+  }
+
+  /**
+   * Header for a bot turn (runtime/bots/bot-turn.ts): the mode reminder, if
+   * any, and neutral operating guidance — never a coding-agent identity. The
+   * bot's persona leads the system prompt ahead of this.
+   */
+  export function bot(mode?: 'plan' | 'build') {
+    const prompts: string[] = []
+    if (mode === 'plan') prompts.push(PROMPT_PLAN_MODE)
+    else if (mode === 'build') prompts.push(PROMPT_BUILD_MODE)
+    prompts.push(PROMPT_BOT)
+    return prompts
   }
 
   async function memoryPrompt(): Promise<string> {

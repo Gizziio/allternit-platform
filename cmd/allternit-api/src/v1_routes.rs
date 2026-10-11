@@ -1441,6 +1441,14 @@ async fn agent_chat_bridge(
     )
     .unwrap_or_default();
 
+    // A bot's chat runs as the bot in gizzi: its persona leads, the user's
+    // personal instruction files and skills stay out, and a Claude CLI brain
+    // gets settings isolation + the bot's tool policy (`bot_turn_marker`).
+    let bot_marker = agent_id
+        .as_deref()
+        .and_then(|aid| crate::agent_session_routes::bot_turn_marker(&state.db, aid, Some(&chat_id)))
+        .or_else(|| crate::agent_session_routes::session_bot_marker(&state.db, &chat_id));
+
     // Cowork sessions also get the user's Cowork settings: their global
     // instructions and the folder to save files in (created here, and allowed
     // without an outside-directory prompt).
@@ -1719,6 +1727,9 @@ async fn agent_chat_bridge(
         // rather than replace it.
         if !system_prompt.trim().is_empty() {
             gizzi_payload["system"] = json!(format!("+{}", system_prompt.trim()));
+        }
+        if let Some(bot) = &bot_marker {
+            gizzi_payload["bot"] = bot.clone();
         }
 
         // Composer tool options (the + menu / mobile "+" sheet):

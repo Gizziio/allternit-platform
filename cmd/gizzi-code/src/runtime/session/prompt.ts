@@ -66,6 +66,9 @@ import { BackgroundTask } from "@/runtime/session/background-task"
 import { HookDispatcher } from "@/runtime/hooks/dispatcher"
 import { Scratchpad } from "@/runtime/session/scratchpad"
 import * as BotChat from "@/runtime/bots/canonical-chat"
+import * as BotTurn from "@/runtime/bots/bot-turn"
+import { BotTurnInfo } from "@/runtime/bots/bot-turn"
+import { composeTurnSystem } from "@/runtime/session/system-header"
 import * as BotInbox from "@/runtime/bots/bot-inbox"
 import { isRoutineTurnText } from "@/runtime/bots/bot-routines"
 import { isMessageAgentSession, MessageAgentTool } from "@/runtime/tools/builtins/message-agent"
@@ -170,6 +173,13 @@ export namespace SessionPrompt {
       ),
     format: MessageV2.Format.optional(),
     system: z.string().optional(),
+    /**
+     * Run this turn as one of the user's platform bots (sent by
+     * allternit-api): the bot's identity leads, and the user's personal
+     * instruction files and skills are not loaded. Stored on the user message
+     * and sticky for the session. See runtime/bots/bot-turn.ts.
+     */
+    bot: BotTurnInfo.optional(),
     /**
      * The session's working folder (e.g. its project's folder): tools and CLI
      * agents run there. Kept for later turns; an empty string clears it.
@@ -615,6 +625,11 @@ const message = await createUserMessage(input)
       }
 
       if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
+      // A bot turn (allternit-api marked a user message with `bot`) runs as
+      // the bot: persona first, no personal instruction files, skills or
+      // workspace identity from ~/.gizzi (runtime/bots/bot-turn.ts). Resolved
+      // before tools are built so the skill tool sees it too.
+      const botTurn = BotTurn.resolve(sessionID, msgs)
 
       if (step === 1 && session.sourceRef) {
         try {
@@ -1052,7 +1067,6 @@ const message = await createUserMessage(input)
 
       // Build system prompt, adding structured output instruction if needed
       // Get workspace context for the session directory (cached)
-      const workspaceSystemPrompt = await WorkspaceContext.getWorkspaceSystemPrompt(session.directory)
       // Bot Mode (B2): when this session is a bot's canonical chat, inject the
       // bot's identity + SOUL + memory as standing instructions. This builder
       // runs inside the runtime session pipeline, so both the TUI (worker /
@@ -1067,20 +1081,20 @@ const message = await createUserMessage(input)
         log.warn("failed to initialize session scratchpad", { sessionID, error })
         return undefined
       })
-      const system = [
-        // If user provided a full system prompt override, use only that
-        ...(lastUser.system && !lastUser.system.startsWith("+")
-          ? [lastUser.system]
-          : [
-              ...(await SystemPrompt.environment(model)),
-              ...(await InstructionPrompt.system()),
-              ...(workspaceSystemPrompt ? [workspaceSystemPrompt] : []),
-              ...(botSystemPrompt ? [botSystemPrompt] : []),
-              ...(scratchpadSystemPrompt ? [scratchpadSystemPrompt] : []),
-              // Append system prompt (prefixed with + or via --append-system-prompt)
-              ...(lastUser.system?.startsWith("+") ? [lastUser.system.slice(1)] : []),
-            ]),
-      ]
+      // If user provided a full system prompt override, use only that; a "+"
+      // prefix (or --append-system-prompt) appends — or, on a bot turn, leads.
+      const system = await composeTurnSystem({
+        userSystem: lastUser.system,
+        bot: botTurn,
+        environment: () => SystemPrompt.environment(model),
+        instructions: () => InstructionPrompt.system(),
+        workspace: async () => {
+          const workspaceSystemPrompt = await WorkspaceContext.getWorkspaceSystemPrompt(session.directory)
+          return workspaceSystemPrompt ? [workspaceSystemPrompt] : []
+        },
+        botChat: botSystemPrompt,
+        scratchpad: scratchpadSystemPrompt,
+      })
       const format = lastUser.format ?? { type: "text" }
       if (format.type === "json_schema") {
         system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
@@ -1411,6 +1425,7 @@ const message = await createUserMessage(input)
     for (const item of await ToolRegistry.tools(
       { modelID: input.model.api.id, providerID: input.model.providerID, npm: input.model.api.npm },
       input.agent,
+      input.session.id,
     )) {
       const schema = ProviderTransform.schema(input.model, z.toJSONSchema(item.parameters) as any)
       tools[item.id] = tool({
@@ -1846,6 +1861,7 @@ const message = await createUserMessage(input)
       system: input.system,
       format: input.format,
       variant,
+      ...(input.bot ? { bot: input.bot } : {}),
     }
     using _ = defer(() => InstructionPrompt.clear(info.id))
 

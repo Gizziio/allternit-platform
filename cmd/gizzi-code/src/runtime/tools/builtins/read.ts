@@ -1,4 +1,5 @@
 import z from "zod/v4"
+import * as BotTurn from "@/runtime/bots/bot-turn"
 import { createReadStream } from "fs"
 import * as fs from "fs/promises"
 import * as path from "path"
@@ -126,7 +127,8 @@ export const ReadTool = Tool.define("read", {
       }
     }
 
-    const instructions = await InstructionPrompt.resolve(ctx.messages, filepath, ctx.messageID)
+    // Bot turns never pick up CLAUDE.md / AGENTS.md / GIZZI.md from the folders they read.
+    const instructions = BotTurn.get(ctx.sessionID) ? [] : await InstructionPrompt.resolve(ctx.messages, filepath, ctx.messageID)
 
     // Exclude SVG (XML-based) and vnd.fastbidsheet (.fbs extension, commonly FlatBuffers schema files)
     const mime = Filesystem.mimeType(filepath)

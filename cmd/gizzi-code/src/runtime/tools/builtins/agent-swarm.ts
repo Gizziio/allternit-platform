@@ -1,4 +1,5 @@
 import z from "zod/v4"
+import * as BotTurn from "@/runtime/bots/bot-turn"
 import { Tool } from "@/runtime/tools/builtins/tool"
 import { Agent } from "@/runtime/loop/agent"
 import { Session } from "@/runtime/session"
@@ -82,6 +83,8 @@ export const AgentSwarmTool = Tool.define("agent_swarm", async () => ({
           })
 
       if (!existingID) await PermissionNext.setMode(child.id, await PermissionNext.getMode(ctx.sessionID))
+      // A bot's swarm workers stay isolated from the user's personal setup.
+      BotTurn.mark(child.id, BotTurn.get(ctx.sessionID))
       const model = agent.model ?? { providerID: parentInfo.providerID, modelID: parentInfo.modelID }
       const tools = {
         todowrite: false,

@@ -1,3 +1,4 @@
+import type { BotTurnInfo } from "@/runtime/bots/bot-turn"
 import type { LanguageModelV2StreamPart } from "@ai-sdk/provider"
 
 export interface Attachment {
@@ -32,6 +33,12 @@ export interface AgentTask {
    * bridge, which gives the CLI the session's own tools (see CliBridge).
    */
   mcp?: { name: string; url: string; headers: Record<string, string> }
+  /**
+   * Set when the session turn runs as one of the user's platform bots: CLI
+   * adapters isolate the vendor CLI from the user's personal settings and
+   * apply the bot's tool allowlist / approval gates (runtime/bots/bot-turn.ts).
+   */
+  bot?: BotTurnInfo
 }
 
 export interface TaskHandle {
