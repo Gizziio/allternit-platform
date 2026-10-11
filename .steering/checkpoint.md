@@ -1,21 +1,23 @@
 # Steering checkpoint
 
-**Session:** `session/craft-video-host-20261010` · ai worktree `allternit-ai-wt-craft-video-host` (+ platform worktree `allternit-wt-craft-video-host`) · plan dag_76461 (node add/claim/close broken in gizzi 2.1.9 — plan id recorded only)
-**Date:** 2026-10-10 · **State: BOTH PRs OPEN + MERGEABLE, awaiting Eoj (human gate — do not merge)** — ai #508, platform #1490, both on `session/craft-video-host-20261010`.
+**Session:** `session/craft-image-pdf-bundle-rebuild-20261010` · platform worktree `allternit-wt-craft-bundle-rebuild` (branched from `origin/session/craft-video-host-20261010`, PR #1490 — NOT from main)
+**Date:** 2026-10-10 · **State: BUNDLES REBUILT + VERIFIED + PUBLISHED — commit/push/PR next, then human gate (do NOT merge; Eoj merges, #1490 first)**
 
 ## Goal
-Craft editors Phase 3 remainder: video kind host wiring. DONE on the ai side: opening a `video`-kind artifact launches FilmCraft over craft:1; `.fcproj` source round-trips through artifact runtime storage; host-requested exports → MP4 → R2 → new version body; footage = media-plane refs in meta.media; media_generate videos + library uploads become video-kind; phone/PWA v1 = view + Edit entry (trim not claimed). DO NOT MERGE (Eoj merges). cloud-api untouched (gate admits video since #1477, re-verified).
+Rebuild the PhotoCraft (`vendor/craft/image/`) and PdfCraft (`vendor/craft/pdf/`) embed bundles with the FIXED `craft-host` crate (postMessage-bytes receive + send() transfer-list fixes, already in #1490), publish to `surfaces/office.allternit.com/public/craft/{image,pdf}/` per `vendor/craft/VENDOR.md`. Bundle-only PR that STACKS on platform #1490 (merge #1490 first; this PR's diff then reduces to the bundle files).
 
-## Just did (final state)
-- **ai repo: committed + pushed** (`session/craft-video-host-20261010`): video-io.ts (classify/resolve/store/buildInitialVideoProject/footageRefFromMeta), VideoCraftEditor (+phone gate), VideoViewer, kinds wiring, export.ts source-for-video, from-transcript media_generate→video-kind, ArtifactsView Upload video, bridge wire-format + opaque-origin fixes (`?empty=1`, kebab-case wire matching the compiled crate, numeric command ids, host→app `*` delivery, app→host `'null'` origin accepted with source pinned, `error` message → fatal). CraftEditor followUp/afterOpen generic hooks. Tests: vitest 175/175 across 19 touched suites (craft 42 incl. new wire/opaque-origin tests, video-io 19, registry 25); typecheck exit 0; SW guard clean.
-- **Live smoke (Playwright, installed Chrome, no deploys)** caught FIVE independent full-blockers — nothing had ever booted the embed end-to-end: (1) office /craft/* CSP (applying since #1475) blocked inline boot scripts + wasm fetch + opaque-origin module loads → fixed in _headers; (2) bridge.ts wire format mismatch (craft:-prefixed vs the crate's bare kebab-case + numeric ids) → bridge corrected, PROTOCOL.md corrected; (3) opaque-origin postMessage (host→app must target '*', app→host arrives as 'null'); (4) craft-host wasm transport dropped every [json,bytes] message AND send() passed the message array as the transfer list (DataCloneError swallowed) → fixed in the crate (Allternit-authored); (5) FilmCraft embed mode stalled save-requests when idle (egui stops repaints) → 250ms repaint cadence.
-- **Platform**: docs + map done (artifact-modes shipped paragraph; artifacts-v2 contract bullet; features.json Phase-3 decision + corrected mirror claim; five PRE-EXISTING --validate red entries fixed; check_links 0 problems; --validate exit 0 with the ai worktree). FilmCraft bundle rebuilt twice (open-bytes fix, then cadence fix) and published to surfaces/office.allternit.com/public/craft/video/ (craft:1 ×7, wasm 23.1 MB, 0 ≥25 MiB). Smoke verified through the save watcher firing: `craft:1: save-request for /projects/Smoke.fcproj (1503 bytes)` — but the send() transfer-list bug blocked its delivery; the send-fix rebuild is QUEUED behind another session's cargo test lock on the shared target.
+## Just did
+- Worktree `allternit-wt-craft-bundle-rebuild`, branch `session/craft-image-pdf-bundle-rebuild-20261010` @ 3f33259a5f (tip of #1490 branch). Crate fix confirmed present in `craft-host/src/lib.rs`.
+- Toolchain: `wasm-bindgen 0.2.129` already installed (matches pin — no reinstall), `trunk 0.21.14`, `CARGO_TARGET_DIR` = workspace `.shared-target`. Ran with a disk guard (abort < 4 GiB free; never tripped — free stayed 17–28 GiB).
+- First PhotoCraft build attempt FAILED on missing `assets/app-icon/hicolor/128x128/apps/ai.storyteller.photocraft.png` — the rebranded title-bar tile is gitignored (`*.png`, machine-local build input; the d3622dccde bundle committer's copy died with their worktree). Regenerated it per `assets/app-icon/README.md` (plain rounded blue tile, 128×128, `#2f7bf5`, rx=28; stdlib PNG writer). PdfCraft needs no such asset.
+- Built both bundles per VENDOR.md (`NO_COLOR=true`, `trunk build --release --features embed`): PhotoCraft wasm-release 7m17s, PdfCraft 3m11s; both compiled the fixed `craft-host v0.1.0` from `vendor/craft/craft-host`.
+- Verified: image wasm 25,332,694 B (24.16 MiB, was 25,332,464), pdf wasm 23,849,253 B (22.74 MiB, was 23,849,111); `strings *_bg.wasm | grep -c craft:1` = **4 and 4** (>0 ✓); 0 files ≥ 25 MiB in either bundle.
+- Published per VENDOR.md: `cp -R dist/web/.` into both office surface dirs; removed superseded old-hash js/wasm so each dir keeps its exact 3-file layout (`index.html` + hashed js + hashed wasm; new hashes `photocraft-web-7757320e4f5ebbfb`, `pdfcraft-web-502fe99e2179d301`, index.html references match).
 
-## Next (for Eoj)
-1. Merge BOTH PRs together (ai #508 + platform #1490): the ai bridge speaks the corrected wire + expects the corrected headers + fixed bundle. Office deploy applies CSP + bundle; ai deploys the host wiring; then the in-product save test (paint/trim → save → reload → craft/source.fcproj + fresh version) can finally run.
-2. After merging: m.allternit.com PWA manual deploy when Eoj wants phone users to have it (SW bump NOT needed — guard passes; the PWA picks up app-code changes on its next build+deploy).
-3. Follow-up flagged in both PR bodies: rebuild the image/pdf bundles (same craft-host crate, no code change) before announcing pdf/image editing.
+## Next
+1. Commit `chore(craft): rebuild PhotoCraft/PdfCraft bundles with fixed craft-host`, push branch, open PR (`gh -R Allternit/allternit-platform`, base `main`) stating it stacks on #1490. Do NOT merge — Eoj merges #1490 first, then this.
+2. After both land: office.allternit.com deploy applies the corrected image/pdf bundles; live boot check (handshake → craft:open → command round-trip) still belongs in future CI per VENDOR.md.
 
 ## Open questions
-- Export-on-save encode cost; cross-session media relink edge cases; phone trim UX — all flagged in the PR bodies.
-- Image/pdf bundles share the pre-fix crate (flagged follow-up, deliberately not redeployed here).
+- Disk was 17 GiB free at session start (below the AGENTS.md 50 GB gate; surfaced to orchestrator). Builds stayed bounded; free space 28 GiB at end — but a workspace cleanup is overdue.
+- The regenerated title-bar tile is my reconstruction from the README spec (exact prior PNG unrecoverable — not in git, not in any live checkout). Cosmetic-only (title-bar mark); flag if the original resurfaces.
