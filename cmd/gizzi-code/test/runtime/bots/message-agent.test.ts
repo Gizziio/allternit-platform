@@ -142,11 +142,27 @@ describe("message_agent delivery (fire-and-forget)", () => {
     expect(envelope.message).toBe(payload)
   })
 
-  test("sender must be a canonical bot session — fail closed otherwise", async () => {
+  test("sender must be a bot's own chat — fail closed otherwise", async () => {
     await seedPair()
-    await expect(
-      executeMessageAgent({ target: "bob", message: "hi" }, "ses_not_a_bot"),
-    ).rejects.toThrow(/not a canonical bot chat/)
+    // Not a gizzi canonical chat and not an app bot chat (the API isn't
+    // reachable with credentials here): refused, nothing delivered.
+    const realFetch = globalThis.fetch
+    globalThis.fetch = (async () => new Response(JSON.stringify({ error: "nope" }), { status: 404 })) as typeof fetch
+    try {
+      await expect(
+        executeMessageAgent({ target: "bob", message: "hi" }, "ses_not_a_bot"),
+      ).rejects.toThrow(/isn't one of your bots' chats/)
+    } finally {
+      globalThis.fetch = realFetch
+    }
+  })
+
+  test("target list returns the teammates instead of sending", async () => {
+    await seedPair()
+    const result = await executeMessageAgent({ target: "list" } as any, "ses_alice")
+    expect(result.output).toContain("bob, Bob: researcher")
+    expect(result.output).not.toContain("alice")
+    expect(result.metadata).toMatchObject({ target: "list", delivered: false })
   })
 })
 
@@ -155,7 +171,13 @@ describe("gating predicate (D5)", () => {
     await seedPair()
     expect(await isMessageAgentSession("ses_alice")).toBe(true)
     expect(await isMessageAgentSession("ses_bob")).toBe(true)
-    expect(await isMessageAgentSession("ses_regular_chat")).toBe(false)
+    const realFetch = globalThis.fetch
+    globalThis.fetch = (async () => new Response("{}", { status: 404 })) as typeof fetch
+    try {
+      expect(await isMessageAgentSession("ses_regular_chat")).toBe(false)
+    } finally {
+      globalThis.fetch = realFetch
+    }
     expect(await isMessageAgentSession("")).toBe(false)
   })
 })

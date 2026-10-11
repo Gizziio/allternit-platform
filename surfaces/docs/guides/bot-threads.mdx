@@ -38,6 +38,18 @@ Type to filter by title. Use the arrow keys and Enter, or click; **Esc** closes.
 
 Checklist progress is reported as completed steps out of total steps. Review means the result needs attention; it is not a claim that the task has been approved. Use Stop on an active turn to interrupt execution, including a turn started by the server. Stopping a turn and resolving a task are separate actions.
 
+## Bots handing work to other bots
+
+A bot's own chat (its main chat or one of its threads) can hand a task to another of **your** bots with the `message_agent` tool. This is how your [main bot](/surfaces/bots#your-main-bot) routes work to the bot that owns it.
+
+- **Who exists.** `message_agent` with target `list` returns your other bots with their title, tagline and description, so the bot can pick the owner. Targets resolve by name, `@handle` or id, case-insensitive; an unknown or ambiguous name returns the choices instead of guessing.
+- **Where the work goes.** The target gets a task thread (created by `bot`) linked under the caller's thread (`parentThreadId`) and in the same project, so it shows in the target bot's thread list and on the project page like any other thread. A follow-up from the same chat to the same bot continues that thread while it is open; a second hand-off while it is still working is refused with "still working".
+- **What comes back.** The target runs the task at once. If it replies within the wait window (90 seconds by default), the reply is the tool's result. Longer work returns a "started" handle with the thread id, and the result is posted into the caller's chat when it lands. The thread moves to **Review** with the reply as its summary, or to **Waiting on you** with the reason if the turn fails.
+- **Ownership.** The calling bot comes from the chat's session, never from the model's input, and the target must belong to the same account. Group rooms, regular chats and subagents do not get the tool.
+- **Terminal bots** (made with `gizzi agents bot`, kept in `~/.gizzi/bots`) keep the inbox model: the message lands in the target's inbox and its reply arrives later as a background message.
+
+In the chat's process block the call reads **Handed to Scout**.
+
 ## Context generations
 
 A durable thread can span several model sessions, called generations. A handoff checkpoints the current work, opens a fresh session, and seeds it with the checkpoint. The transcript marks the boundary with a divider and summary. Earlier generations remain part of the work history.
@@ -62,6 +74,8 @@ These authenticated routes belong to the private Allternit API data plane, norma
 | POST | `/api/v1/threads/:id/handoff` | Checkpoint and create a fresh generation. |
 | PUT | `/api/v1/threads/:id/deps` | Set dependencies. |
 | GET | `/api/v1/threads/:id/events` | Read lifecycle events. |
+| POST | `/api/v1/bot-routing/roster` | `{sessionId}` → the bot behind a bot chat session and the account's other bots. 404 when the session is not a bot's chat. |
+| POST | `/api/v1/bot-routing/message` | `{sessionId, target, message, waitSeconds?}` → start or continue the target bot's task thread; returns `status` (`done` with `reply`, `started`, or `failed`), `threadId` and `bot`. |
 
 Continue with [project coordination](/guides/project-coordination) or [artifact modes](/guides/artifact-modes).
 
