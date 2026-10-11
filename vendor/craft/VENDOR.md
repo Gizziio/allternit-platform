@@ -54,9 +54,30 @@ fair-source license forbidding use in competing products. Not vendored, never wi
 
 The WASM frontends (`apps/*-web`) are built in CI and published as static bundles to
 `surfaces/office.allternit.com/public/craft/<app>/` (served at
-`office.allternit.com/craft/<app>/`) and mirrored into `allternit-ai/public/craft/`.
-The app embeds them sandboxed cross-origin. The host-page bridge lives in
-`craft-host/` (shared crate).
+`office.allternit.com/craft/<app>/`). There is deliberately **no mirror into
+`allternit-ai/public/craft/`** (one never existed; the workspace app loads the bundles
+cross-origin from office.allternit.com). The app embeds them sandboxed cross-origin.
+The host-page bridge lives in `craft-host/` (shared crate).
+
+The serving origin's CSP (`surfaces/office.allternit.com/public/_headers`, `/craft/*`)
+must keep **`script-src 'unsafe-inline'`**: every vendored app's `index.html` boots from
+an inline `<script>` (upstream ships it that way and the per-build hash is baked into
+the module script, so a CSP hash would churn on every rebuild). Without it all three
+editors silently fail to boot — the iframe stays blank and the host handshake times
+out. `connect-src 'self'` + COOP/COEP stay: no network exfiltration path, and the apps
+run in opaque-origin sandboxed iframes. A live boot check (handshake → `craft:open` →
+one command round-trip against the deployed bundle) belongs in the future CI job — a
+`strings | grep craft:1` check does not catch a CSP-blocked boot.
+
+Embed-mode runtime contract (verified live 2026-10-10, FilmCraft; keep on refresh):
+the save watcher in `apps/filmcraft-web/src/embed.rs::pump` only runs while egui
+produces frames, and an idle editor stops requesting repaints — so embed mode must
+keep a minimal frame cadence (`ctx.request_repaint_after(250ms)` in `WebApp::logic`,
+feature `embed`). Drop that and `craft:save-request`s stall forever after an idle
+spell. Also: host→app postMessage must target `'*'` (the sandboxed iframe has an
+opaque origin; an explicit target origin is never delivered), and app→host messages
+arrive with `event.origin === 'null'` — the host must accept that and pin
+`event.source` to its own iframe.
 
 ## Building the bundles (manual until CI lands)
 

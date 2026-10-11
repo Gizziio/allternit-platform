@@ -118,7 +118,15 @@ impl eframe::App for WebApp {
         }
         self.autosave.tick(&self.app.session, ctx);
         #[cfg(feature = "embed")]
-        crate::embed::pump(self);
+        {
+            crate::embed::pump(self);
+            // The save watcher and host-command side effects only advance
+            // while frames run, and an idle editor stops requesting repaints
+            // — which would stall craft:save-requests indefinitely. Keep a
+            // minimal frame cadence in embed mode (live-verified: without it
+            // the save watcher never re-ran after an idle period).
+            ctx.request_repaint_after(std::time::Duration::from_millis(250));
+        }
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {

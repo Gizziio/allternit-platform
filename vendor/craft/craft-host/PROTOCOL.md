@@ -23,34 +23,44 @@ generalizes it and adds the security model embedding requires.
 
 ## Handshake
 1. Host loads iframe: `https://office.allternit.com/craft/<app>/?embed=1&origin=<urlencoded parent origin>`.
-2. App posts `craft:ready {app, version, protocol: "craft:1"}` to `event.source` (it does
+2. App posts `ready {app, version, protocol: "craft:1"}` (wire type names are the
+   crate's bare kebab-case variants — `ready`, `hello`, `open`, `command`, `save-ack`,
+   `theme`, `ping` host→app and `ready`, `hello-ack`, `open-ack`, `save-request`,
+   `command-result`, `command-event`, `document-changed`, `error` app→host; NO
+   `craft:` prefix on the wire — `protocol.rs` is the source of truth). The app does
    not know the parent origin yet; it replies to whoever loaded it — safe because it
-   was loaded with `sandbox` and no credentials, and it will validate the token).
-3. Host posts `craft:hello {protocol: "craft:1", token, theme, chrome, capabilities}`.
+   was loaded with `sandbox` and no credentials, and it will validate the token.
+   NOTE: the sandboxed iframe has an OPAQUE origin, so the parent receives these with
+   `event.origin === 'null'` — hosts must accept 'null' AND pin `event.source` to
+   their own iframe. Host→app messages must be posted with target `'*'` — an explicit
+   target origin is never delivered to an opaque-origin window.
+3. Host posts `hello {protocol: "craft:1", token, theme, chrome, capabilities}`.
 4. App validates token (random ≥128-bit, host-generated per editor session) and origin
    (the `origin` query param must equal `event.origin` of the `hello` message), then
    enters embedded mode: chrome hidden (no menu bar/window chrome per `chrome` value),
-   theme applied, and acknowledges `craft:hello-ack {ok: true}`. Until a valid hello,
+   theme applied, and acknowledges `hello-ack {ok: true}`. Until a valid hello,
    commands are rejected and the app shows its normal standalone UI.
+   `command` ids are NUMBERS (u64) on the wire, not strings.
 
 ## Messages (host → app)
 | type | payload | meaning |
 |---|---|---|
-| `craft:open` | `{name, bytes: ArrayBuffer (transferred), format?}` | replace current document |
-| `craft:command` | `{id, cmd, params}` | run an engine command (the agent lane); see Command channel |
-| `craft:theme` | `{dark, accent?, scale?}` | live theme update |
-| `craft:ping` | `{} | keepalive / liveness |
+| `open` | `{name, bytes: ArrayBuffer (transferred), format?}` | replace current document / import media |
+| `command` | `{id: u64, cmd, params}` | run an engine command (the agent lane); see Command channel |
+| `theme` | `{theme: {dark, accent?, scale?}}` | live theme update |
+| `ping` | `{}` | keepalive / liveness |
 
 ## Messages (app → host)
 | type | payload | meaning |
 |---|---|---|
-| `craft:ready` | `{app, version, protocol}` | step 2 of handshake |
-| `craft:hello-ack` | `{ok, error?}` | step 4; `ok:false` = host must show an error surface |
-| `craft:open-ack` | `{ok, error?, warnings?}` | document loaded (or parse errors, warnings) |
-| `craft:document-changed` | `{dirty, autosaveable?}` | dirty flag for the host header |
-| `craft:save-request` | `{name, format, bytes: ArrayBuffer (transferred), meta?}` | user (or command) initiated save; host persists, then MUST reply `craft:save-ack` |
-| `craft:command-result` | `{id, ok, result?, error?}` | response to `craft:command` |
-| `craft:command-event` | `{event, data}` | async engine events (progress, selection changed, etc.) |
+| `ready` | `{app, version, protocol}` | step 2 of handshake |
+| `hello-ack` | `{ok, error?}` | step 4; `ok:false` = host must show an error surface |
+| `open-ack` | `{ok, error?, warnings?}` | document loaded (or parse errors, warnings) |
+| `document-changed` | `{dirty}` | dirty flag for the host header |
+| `save-request` | `{name, format?, bytes: ArrayBuffer (transferred), meta}` | user (or command) initiated save; host persists, then MUST reply `save-ack` |
+| `command-result` | `{id: u64, ok, result?, error?}` | response to `command` |
+| `command-event` | `{event, data}` | async engine events (progress, fatal panics, selection changed, etc.) |
+| `error` | `{message}` | unrecoverable editor failure; host shows its error surface |
 
 ## Command channel
 Each app already has a JSON command registry (PhotoCraft 500+, PdfCraft, FilmCraft 650+)
@@ -64,23 +74,28 @@ execution to one in flight per session unless the registry documents re-entrancy
 - App iframe: `sandbox="allow-scripts allow-downloads"` (no `allow-same-origin` in v1 —
   opaque origin, storage partitioned; OPFS use is verified in the build phase, and if a
   hard blocker appears we revisit with `allow-same-origin` + same-site serving).
-- Token: host-generated per session, passed only via `craft:hello`, validated by the app
-  before accepting `craft:open`/`craft:command`. Wrong/missing token → ignore + log.
-- Origin: app was loaded with `?origin=`; a `craft:hello` whose `event.origin` differs
-  is ignored. The served `index.html` carries no credentials, cookies, or tokens of its
+- Token: host-generated per session, passed only via `hello`, validated by the app
+  before accepting `open`/`command`. Wrong/missing token → ignore + log.
+- Origin: app was loaded with `?origin=`; an incoming message whose `event.origin`
+  differs is ignored (the host's origin; the app's own origin is opaque 'null'). The served `index.html` carries no credentials, cookies, or tokens of its
   own (static hosting only).
-- CSP on `/craft/*`: `default-src 'none'; script-src 'self' 'wasm-unsafe-eval';
-  style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self'
-  blob:; connect-src 'none'; worker-src 'self' blob:`. COOP/COEP headers for
-  wasm threads (verify Pages support; else single-threaded builds — upstream documents
-  this fallback).
+- Serving headers on `/craft/*` (live-verified 2026-10-10 — the sandboxed iframe's
+  opaque origin makes these load-bearing, and the editors silently fail to boot without
+  them): CSP `default-src 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval';
+  style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:;
+  font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:` (unsafe-inline:
+  the vendored index.html boots from inline scripts; connect-src 'self': the same-origin
+  .wasm fetch), `Access-Control-Allow-Origin: *` + `Cross-Origin-Resource-Policy:
+  cross-origin` (module scripts/wasm load cross-origin from the opaque-origin document),
+  COOP same-origin + COEP require-corp retained. The office origin carries no
+  credentials and third-party connections stay cut (no telemetry path).
 - Bytes travel as `ArrayBuffer` via `postMessage` transferables (no base64 copies of
   multi-MB documents).
 
 ## Failure modes (host UI)
-- iframe load error / no `craft:ready` in N seconds → error surface with retry.
-- `craft:hello-ack {ok:false}` → "editor refused this embed" (version/protocol mismatch).
-- No ack to `craft:save-request` in 30s → app keeps document dirty and shows its own
+- iframe load error / no `ready` in N seconds → error surface with retry.
+- `hello-ack {ok:false}` → "editor refused this embed" (version/protocol mismatch).
+- No ack to `save-request` in 30s → app keeps document dirty and shows its own
   "host unreachable — keep editing" state; nothing is lost.
 
 ## Per-app adapter mapping (from the 2026-10-09 audits)
@@ -93,13 +108,13 @@ validation) and only then exposes the existing object to the parent:
 - `craft:open` → bytes → `File` → `filmcraft.importFiles(...)` / `openProject`
 - `craft:command` → `filmcraft.execute(cmd, params)` / `filmcraft.request(...)`
 - save → after `file.save` completes, `filmcraft.files()` + `filmcraft.readFile(path)` →
-  `craft:save-request` to parent (bytes as transferables)
-- ready → `window.filmcraftLoad.readyMs`; fatal → `craft:hello-ack {ok:false}` semantics
-  via the `fatal` flag surfaced in `craft:ready`
+  `save-request` to parent (bytes as transferables)
+- ready → `window.filmcraftLoad.readyMs`; fatal → the `error {message}` app→host type (adapters may also surface it via a
+  `command-event {event:"fatal"}`)
 
 **pdf (no JS object; in-process APIs)** — adapter inside `apps/pdfcraft-web` (~150 lines,
-`embed` feature): bridge init on canvas start; `craft:open` → existing public
-`open_bytes()`; `craft:command` → in-process `execute(command_id)`; **new save-bytes
+`embed` feature): bridge init on canvas start; `open` → existing public
+`open_bytes()`; `command` → in-process `execute(command_id)`; **new save-bytes
 write-back callback** hooked where saves today become Blob downloads
 (`editing.rs:659`) — in embed mode bytes post to parent instead of (or in addition to)
 the download.

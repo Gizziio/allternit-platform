@@ -299,16 +299,25 @@ pub mod wasm {
                     if e.origin() != cfg_origin {
                         return;
                     }
-                    let body = match e.data().as_string() {
-                        Some(s) => s,
-                        None => return,
-                    };
-                    let bytes = e.data().dyn_into::<js_sys::Array>().ok().and_then(|a| {
-                        a.get(1)
+                    // Two wire shapes: a plain JSON string, or [json, ArrayBuffer]
+                    // when the message carries transferred bytes (craft:open).
+                    // The string-only form used to return early here, which
+                    // silently dropped EVERY host→app message with bytes — the
+                    // host's craft:open never reached the app (live-verified).
+                    let data = e.data();
+                    let (body, bytes) = if let Some(s) = data.as_string() {
+                        (s, None)
+                    } else if let Ok(arr) = data.clone().dyn_into::<js_sys::Array>() {
+                        let Some(body) = arr.get(0).as_string() else { return };
+                        let bytes = arr
+                            .get(1)
                             .dyn_into::<js_sys::ArrayBuffer>()
                             .ok()
-                            .map(|b| js_sys::Uint8Array::new(&b).to_vec())
-                    });
+                            .map(|b| js_sys::Uint8Array::new(&b).to_vec());
+                        (body, bytes)
+                    } else {
+                        return;
+                    };
                     let replies = bridge
                         .borrow_mut()
                         .handle_message(&body, bytes, &mut *hooks.borrow_mut());
@@ -388,7 +397,13 @@ pub mod wasm {
             let arr = js_sys::Array::new();
             arr.push(&JsValue::from_str(&body));
             arr.push(&buf);
-            let _ = parent.post_message_with_transfer(arr.as_ref(), origin, arr.as_ref());
+            // The transfer list must name ONLY the ArrayBuffer: passing the
+            // message array itself (with the JSON string inside) throws
+            // DataCloneError and the whole post is dropped — silently, via
+            // `let _ =` — which used to eat every save-request (live-verified).
+            let transfer = js_sys::Array::new();
+            transfer.push(&buf);
+            let _ = parent.post_message_with_transfer(arr.as_ref(), origin, transfer.as_ref());
         } else {
             let _ = parent.post_message(&JsValue::from_str(&body), origin);
         }
